@@ -72,6 +72,7 @@ typedef struct _matrixSize      // Optional Command-line multiplier for matrix s
     unsigned int uiWA, uiHA, uiWB, uiHB, uiWC, uiHC;
 } sMatrixSize;
 
+int nIter=1;
 ////////////////////////////////////////////////////////////////////////////////
 //! Compute reference data set matrix multiply on CPU
 //! C = A * B
@@ -152,6 +153,10 @@ void initializeCUDA(int argc, char **argv, int &devID, int &iSizeMultiple, sMatr
     {
         iSizeMultiple = getCmdLineArgumentInt(argc, (const char **)argv, "sizemult");
     }
+    if (checkCmdLineFlag(argc, (const char **)argv, "iter"))
+    {
+        nIter = getCmdLineArgumentInt(argc, (const char **)argv, "iter");
+    }
 
     iSizeMultiple = min(iSizeMultiple, 100);
     iSizeMultiple = max(iSizeMultiple, 1);
@@ -206,24 +211,7 @@ int matrixMultiply(int argc, char **argv, int devID, sMatrixSize &matrix_size)
     q= 37019;
     e=0x10001;
 	d=985968293;
-
-	/*
-	 printf("\nENTER MESSAGE\n");
-	 fflush(stdin);
-	 scanf("%s", msg);
-	 numChars = strlen(msg);
-	 blocksPerGrid =(numChars + threadsPerBlock - 1) / threadsPerBlock;
-	 */
-
 	n = p * q;
-	t = (p - 1) * (q - 1);
-    // ce();
-// 	/*
-// 	 printf("\nPOSSIBLE VALUES OF e AND d ARE\n");
-// 	 for (i = 0; i < j - 1; i++)
-// 	 printf("\n%ld\t%ld", e[i], d[i]);
-// 	 */
-
     cudaDeviceProp deviceProp;
 
     checkCudaErrors(cudaGetDeviceProperties(&deviceProp, devID));
@@ -253,8 +241,6 @@ int matrixMultiply(int argc, char **argv, int devID, sMatrixSize &matrix_size)
     memcpy(h_A,h_A2,mem_size_A);
     memcpy(h_B,h_B2,mem_size_B);
 
-    encrypt_cpu(h_A,size_A);
-    encrypt_cpu(h_B,size_B);
     // allocate device memory
     float *d_A, *d_B, *d_C;
     unsigned int size_C = matrix_size.uiWC * matrix_size.uiHC;
@@ -266,26 +252,34 @@ int matrixMultiply(int argc, char **argv, int devID, sMatrixSize &matrix_size)
 
     checkCudaErrors(cudaMalloc((void **) &d_A, mem_size_A));
     checkCudaErrors(cudaMalloc((void **) &d_B, mem_size_B));
+    checkCudaErrors(cudaMalloc((void **) &d_C, mem_size_C));
+    cudaEvent_t start, stop;
+    checkCudaErrors(cudaEventCreate(&start));
+    checkCudaErrors(cudaEventCreate(&stop));
+    // Record the start event
+    checkCudaErrors(cudaEventRecord(start, NULL));
+    
+    encrypt_cpu(h_A,size_A);
+    encrypt_cpu(h_B,size_B);
     checkCudaErrors(cudaMemcpy(d_A, h_A, mem_size_A, cudaMemcpyHostToDevice));
     checkCudaErrors(cudaMemcpy(d_B, h_B, mem_size_B, cudaMemcpyHostToDevice));
-    checkCudaErrors(cudaMalloc((void **) &d_C, mem_size_C));
 
     // setup execution parameters
     dim3 threads(block_size, block_size);
     dim3 grid(matrix_size.uiWC / threads.x, matrix_size.uiHC / threads.y);
 
     // create and start timer
-    printf("Computing result using CUBLAS...");
+    // printf("Computing result using CUBLAS...");
 
     // execute the kernel
-    int nIter = 30;
+    // int nIter = 30;
 
     // CUBLAS version 2.0
     {
         const float alpha = 1.0f;
         const float beta  = 0.0f;
         cublasHandle_t handle;
-        cudaEvent_t start, stop;
+        cudaEvent_t compute_end, compute_start;
 
         checkCudaErrors(cublasCreate(&handle));
 
@@ -293,21 +287,21 @@ int matrixMultiply(int argc, char **argv, int devID, sMatrixSize &matrix_size)
         // checkCudaErrors(cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, matrix_size.uiWB, matrix_size.uiHA, matrix_size.uiWA, &alpha, d_B, matrix_size.uiWB, d_A, matrix_size.uiWA, &beta, d_C, matrix_size.uiWB));
 
         // Allocate CUDA events that we'll use for timing
-        checkCudaErrors(cudaEventCreate(&start));
-        checkCudaErrors(cudaEventCreate(&stop));
+        checkCudaErrors(cudaEventCreate(&compute_start));
+        checkCudaErrors(cudaEventCreate(&compute_end));
 
-        // Record the start event
-        checkCudaErrors(cudaEventRecord(start, NULL));
 
-        // for (int j = 0; j < nIter; j++)
-        {
-            //note cublas is column primary!
-            //need to transpose the order
-            decrypt_gpu(d_A,mem_size_A/sizeof(int));
-            decrypt_gpu(d_B,mem_size_B/sizeof(int));
-            checkCudaErrors(cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, matrix_size.uiWB, matrix_size.uiHA, matrix_size.uiWA, &alpha, d_B, matrix_size.uiWB, d_A, matrix_size.uiWA, &beta, d_C, matrix_size.uiWB));
-
-        }
+        decrypt_gpu(d_A,mem_size_A/sizeof(int));
+        decrypt_gpu(d_B,mem_size_B/sizeof(int));
+        cudaEventRecord(compute_start,NULL);
+            for (int j = 0; j < nIter; j++)
+            {
+                //note cublas is column primary!
+                //need to transpose the order
+                checkCudaErrors(cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, matrix_size.uiWB, matrix_size.uiHA, matrix_size.uiWA, &alpha, d_B, matrix_size.uiWB, d_A, matrix_size.uiWA, &beta, d_C, matrix_size.uiWB));
+            }
+        cudaEventRecord(compute_end,NULL);
+        checkCudaErrors(cudaEventSynchronize(compute_end));
 
         encrypt_gpu(d_C,mem_size_C/sizeof(int));
         // decrypt_gpu(d_C,mem_size_C/sizeof(int));
@@ -321,18 +315,20 @@ int matrixMultiply(int argc, char **argv, int devID, sMatrixSize &matrix_size)
         // Wait for the stop event to complete
         checkCudaErrors(cudaEventSynchronize(stop));
 
-        float msecTotal = 0.0f;
+        float msecTotal = 0.0f,msecCompute=0.0f;
         checkCudaErrors(cudaEventElapsedTime(&msecTotal, start, stop));
-
+        cudaEventElapsedTime(&msecCompute,compute_start,compute_end);
         // Compute and print the performance
-        float msecPerMatrixMul = msecTotal / nIter;
+        float msecPerMatrixMul = msecTotal/nIter;
         double flopsPerMatrixMul = 2.0 * (double)matrix_size.uiHC * (double)matrix_size.uiWC * (double)matrix_size.uiHB;
         double gigaFlops = (flopsPerMatrixMul * 1.0e-9f) / (msecPerMatrixMul / 1000.0f);
         printf(
-            "Performance= %.2f GFlop/s, Time= %.3f msec, Size= %.0f Ops\n",
+            "Performance= %.2f GFlop/s,Compute time= %.3f msec, Total time= %.3f msec, Size= %.0f Ops, nIter=%d\n",
             gigaFlops,
-            msecPerMatrixMul,
-            flopsPerMatrixMul);
+            msecCompute,
+            msecTotal,
+            flopsPerMatrixMul,
+            nIter);
 
         // Destroy the handle
         checkCudaErrors(cublasDestroy(handle));

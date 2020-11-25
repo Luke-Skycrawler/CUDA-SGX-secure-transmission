@@ -1,6 +1,7 @@
 // #define _DEBUG
 #include "RSA.cu"
 #include <stdlib.h>
+unsigned int mm[BUZZ_SIZE], res[BUZZ_SIZE];
 int numChars;
 int main() {
     p= 74531;
