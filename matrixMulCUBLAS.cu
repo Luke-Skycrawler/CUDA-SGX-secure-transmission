@@ -55,7 +55,7 @@
 // CUDA runtime
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
-
+#include <cstdlib>
 // CUDA and CUBLAS functions
 #include <helper_functions.h>
 #include <helper_cuda.h>
@@ -153,7 +153,7 @@ void initializeCUDA(int argc, char **argv, int &devID, int &iSizeMultiple, sMatr
         iSizeMultiple = getCmdLineArgumentInt(argc, (const char **)argv, "sizemult");
     }
 
-    iSizeMultiple = min(iSizeMultiple, 10);
+    iSizeMultiple = min(iSizeMultiple, 100);
     iSizeMultiple = max(iSizeMultiple, 1);
 
     cudaDeviceProp deviceProp;
@@ -196,8 +196,16 @@ void initializeCUDA(int argc, char **argv, int &devID, int &iSizeMultiple, sMatr
 ////////////////////////////////////////////////////////////////////////////////
 int matrixMultiply(int argc, char **argv, int devID, sMatrixSize &matrix_size)
 {
-	p = 157;
-	q = 373;
+	// p = 157;
+	// q = 373;
+    // p= 126611;
+    // q= 130643;
+    // e=0x10001;
+    // d=5621128193;
+    p= 74531;
+    q= 37019;
+    e=0x10001;
+	d=985968293;
 
 	/*
 	 printf("\nENTER MESSAGE\n");
@@ -209,7 +217,7 @@ int matrixMultiply(int argc, char **argv, int devID, sMatrixSize &matrix_size)
 
 	n = p * q;
 	t = (p - 1) * (q - 1);
-	ce();
+    // ce();
 // 	/*
 // 	 printf("\nPOSSIBLE VALUES OF e AND d ARE\n");
 // 	 for (i = 0; i < j - 1; i++)
@@ -229,17 +237,24 @@ int matrixMultiply(int argc, char **argv, int devID, sMatrixSize &matrix_size)
     unsigned int size_A = matrix_size.uiWA * matrix_size.uiHA;
     unsigned int mem_size_A = sizeof(float) * size_A;
     float *h_A = (float *)malloc(mem_size_A);
+    float *h_A2 = (float *)malloc(mem_size_A);
     unsigned int size_B = matrix_size.uiWB * matrix_size.uiHB;
     unsigned int mem_size_B = sizeof(float) * size_B;
     float *h_B = (float *)malloc(mem_size_B);
+    float *h_B2 = (float *)malloc(mem_size_B);
 
     // set seed for rand()
     srand(2006);
 
     // initialize host memory
-    randomInit(h_A, size_A);
-    randomInit(h_B, size_B);
+    randomInit(h_A2, size_A);
+    randomInit(h_B2, size_B);
+    
+    memcpy(h_A,h_A2,mem_size_A);
+    memcpy(h_B,h_B2,mem_size_B);
 
+    encrypt_cpu(h_A,size_A);
+    encrypt_cpu(h_B,size_B);
     // allocate device memory
     float *d_A, *d_B, *d_C;
     unsigned int size_C = matrix_size.uiWC * matrix_size.uiHC;
@@ -288,12 +303,16 @@ int matrixMultiply(int argc, char **argv, int devID, sMatrixSize &matrix_size)
         {
             //note cublas is column primary!
             //need to transpose the order
-            decrypt_gpu(d_A,mem_size_A);
-            decrypt_gpu(d_B,mem_size_B);
+            decrypt_gpu(d_A,mem_size_A/sizeof(int));
+            decrypt_gpu(d_B,mem_size_B/sizeof(int));
             checkCudaErrors(cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, matrix_size.uiWB, matrix_size.uiHA, matrix_size.uiWA, &alpha, d_B, matrix_size.uiWB, d_A, matrix_size.uiWA, &beta, d_C, matrix_size.uiWB));
 
         }
 
+        encrypt_gpu(d_C,mem_size_C/sizeof(int));
+        // decrypt_gpu(d_C,mem_size_C/sizeof(int));
+	    checkCudaErrors(cudaMemcpy(h_CUBLAS, d_C, mem_size_C, cudaMemcpyDeviceToHost));
+        decrypt_cpu(h_CUBLAS,mem_size_C/sizeof(int));
         printf("done.\n");
 
         // Record the stop event
@@ -315,17 +334,17 @@ int matrixMultiply(int argc, char **argv, int devID, sMatrixSize &matrix_size)
             msecPerMatrixMul,
             flopsPerMatrixMul);
 
-        encrypt_gpu(d_C,mem_size_C);
-        checkCudaErrors(cudaMemcpy(h_CUBLAS, d_C, mem_size_C, cudaMemcpyDeviceToHost));
-        decrypt_cpu(h_CUBLAS,mem_size_C);
         // Destroy the handle
         checkCudaErrors(cublasDestroy(handle));
+	
+	// encrypt_cpu(h_CUBLAS,mem_size_C/sizeof(int));
+	// decrypt_cpu(h_CUBLAS,mem_size_C/sizeof(int));
     }
 
     // compute reference solution
     printf("Computing result using host CPU...");
     float *reference = (float *)malloc(mem_size_C);
-    matrixMulCPU(reference, h_A, h_B, matrix_size.uiHA, matrix_size.uiWA, matrix_size.uiWB);
+    matrixMulCPU(reference, h_A2, h_B2, matrix_size.uiHA, matrix_size.uiWA, matrix_size.uiWB);
     printf("done.\n");
 
     // check result (CUBLAS)

@@ -151,8 +151,8 @@ HOST_COMPILER ?= g++
 NVCC          := $(CUDA_PATH)/bin/nvcc -ccbin $(HOST_COMPILER)
 
 # internal flags
-NVCCFLAGS   := -m${TARGET_SIZE}
-CCFLAGS     :=
+NVCCFLAGS   := -m${TARGET_SIZE} -Xcompiler -fopenmp
+CCFLAGS     := 
 LDFLAGS     :=
 
 # build flags
@@ -286,7 +286,7 @@ else
 	@echo "Sample is ready - all dependencies have been met"
 endif
 
-matrixMulCUBLAS.o:matrixMulCUBLAS.cpp
+matrixMulCUBLAS.o:matrixMulCUBLAS.cu
 	$(EXEC) $(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
 
 matrixMulCUBLAS: matrixMulCUBLAS.o

@@ -10,34 +10,25 @@ __device__ long long int mod(int base, int exponent, int den) {
 
 }
 
-__device__ long long int mod_optimized(int base, int exponent, int den) {
-
-	unsigned int a = (base % den) * (base % den);
-	unsigned long long int ret = 1;
-	float size = (float) exponent / 2;
-	if (exponent == 0) {
-		return base % den;
-	} else {
-		while (1) {
-			if (size > 0.5) {
-				ret = (ret * a) % den;
-				size = size - 1.0;
-			} else if (size == 0.5) {
-				ret = (ret * (base % den)) % den;
-				break;
-			} else {
-				break;
-			}
+__device__ unsigned int mod_optimized(unsigned int base,unsigned long int exp,unsigned long int modulus){
+	unsigned long p=1;
+	unsigned long tmp=base;
+	while(exp){
+		tmp%=modulus;
+		if(exp%2){
+			p*=tmp;
+			p%=modulus;
 		}
-		return ret;
+		tmp=tmp*tmp;
+		exp/=2;
 	}
-
+	return p;
 }
-
-__global__ void rsa(int * num, int *key, int *den) {
+__global__ void rsa(unsigned int * num,unsigned long int * key,unsigned long int * den,const int len) {
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
-	int temp;
-	temp = mod(num[i], *key, *den);
+	if(i>=len)return;
+	unsigned int temp;
+	temp = mod_optimized(num[i], *key, *den);
 	//temp = mod_optimized(num[i], *key, *den);
 	atomicExch(&num[i], temp);
 }
