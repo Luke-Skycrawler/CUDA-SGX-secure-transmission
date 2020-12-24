@@ -72,7 +72,7 @@ typedef struct _matrixSize      // Optional Command-line multiplier for matrix s
     unsigned int uiWA, uiHA, uiWB, uiHB, uiWC, uiHC;
 } sMatrixSize;
 
-int nIter=1;
+int nIter=1,encrypt=1,verify=1;
 ////////////////////////////////////////////////////////////////////////////////
 //! Compute reference data set matrix multiply on CPU
 //! C = A * B
@@ -156,6 +156,14 @@ void initializeCUDA(int argc, char **argv, int &devID, int &iSizeMultiple, sMatr
     if (checkCmdLineFlag(argc, (const char **)argv, "iter"))
     {
         nIter = getCmdLineArgumentInt(argc, (const char **)argv, "iter");
+    }
+    if (checkCmdLineFlag(argc, (const char **)argv, "encrypt"))
+    {
+        encrypt = getCmdLineArgumentInt(argc, (const char **)argv, "encrypt");
+    }
+    if (checkCmdLineFlag(argc, (const char **)argv, "verify"))
+    {
+        verify = getCmdLineArgumentInt(argc, (const char **)argv, "verify");
     }
 
     iSizeMultiple = min(iSizeMultiple, 100);
@@ -258,9 +266,10 @@ int matrixMultiply(int argc, char **argv, int devID, sMatrixSize &matrix_size)
     checkCudaErrors(cudaEventCreate(&stop));
     // Record the start event
     checkCudaErrors(cudaEventRecord(start, NULL));
-    
-    encrypt_cpu(h_A,size_A);
-    encrypt_cpu(h_B,size_B);
+    if(encrypt){
+        encrypt_cpu(h_A,size_A);
+        encrypt_cpu(h_B,size_B);
+    }
     checkCudaErrors(cudaMemcpy(d_A, h_A, mem_size_A, cudaMemcpyHostToDevice));
     checkCudaErrors(cudaMemcpy(d_B, h_B, mem_size_B, cudaMemcpyHostToDevice));
 
@@ -290,23 +299,23 @@ int matrixMultiply(int argc, char **argv, int devID, sMatrixSize &matrix_size)
         checkCudaErrors(cudaEventCreate(&compute_start));
         checkCudaErrors(cudaEventCreate(&compute_end));
 
-
-        decrypt_gpu(d_A,mem_size_A/sizeof(int));
-        decrypt_gpu(d_B,mem_size_B/sizeof(int));
+        if(encrypt){
+            decrypt_gpu(d_A,mem_size_A/sizeof(int));
+            decrypt_gpu(d_B,mem_size_B/sizeof(int));
+        }
         cudaEventRecord(compute_start,NULL);
-            for (int j = 0; j < nIter; j++)
-            {
-                //note cublas is column primary!
-                //need to transpose the order
-                checkCudaErrors(cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, matrix_size.uiWB, matrix_size.uiHA, matrix_size.uiWA, &alpha, d_B, matrix_size.uiWB, d_A, matrix_size.uiWA, &beta, d_C, matrix_size.uiWB));
-            }
+        for (int j = 0; j < nIter; j++)
+        {
+            //note cublas is column primary!
+            //need to transpose the order
+            checkCudaErrors(cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, matrix_size.uiWB, matrix_size.uiHA, matrix_size.uiWA, &alpha, d_B, matrix_size.uiWB, d_A, matrix_size.uiWA, &beta, d_C, matrix_size.uiWB));
+        }
         cudaEventRecord(compute_end,NULL);
         checkCudaErrors(cudaEventSynchronize(compute_end));
-
-        encrypt_gpu(d_C,mem_size_C/sizeof(int));
+        if(encrypt)encrypt_gpu(d_C,mem_size_C/sizeof(int));
         // decrypt_gpu(d_C,mem_size_C/sizeof(int));
 	    checkCudaErrors(cudaMemcpy(h_CUBLAS, d_C, mem_size_C, cudaMemcpyDeviceToHost));
-        decrypt_cpu(h_CUBLAS,mem_size_C/sizeof(int));
+        if(encrypt)decrypt_cpu(h_CUBLAS,mem_size_C/sizeof(int));
         printf("done.\n");
 
         // Record the stop event
@@ -332,34 +341,32 @@ int matrixMultiply(int argc, char **argv, int devID, sMatrixSize &matrix_size)
 
         // Destroy the handle
         checkCudaErrors(cublasDestroy(handle));
-	
-	// encrypt_cpu(h_CUBLAS,mem_size_C/sizeof(int));
-	// decrypt_cpu(h_CUBLAS,mem_size_C/sizeof(int));
     }
+    bool resCUBLAS;
+    if(verify){
+        // compute reference solution
+        printf("Computing result using host CPU...");
+        float *reference = (float *)malloc(mem_size_C);
+        matrixMulCPU(reference, h_A2, h_B2, matrix_size.uiHA, matrix_size.uiWA, matrix_size.uiWB);
+        printf("done.\n");
 
-    // compute reference solution
-    printf("Computing result using host CPU...");
-    float *reference = (float *)malloc(mem_size_C);
-    matrixMulCPU(reference, h_A2, h_B2, matrix_size.uiHA, matrix_size.uiWA, matrix_size.uiWB);
-    printf("done.\n");
+        // check result (CUBLAS)
+        resCUBLAS = sdkCompareL2fe(reference, h_CUBLAS, size_C, 1.0e-6f);
 
-    // check result (CUBLAS)
-    bool resCUBLAS = sdkCompareL2fe(reference, h_CUBLAS, size_C, 1.0e-6f);
+        if (resCUBLAS != true)
+        {
+            printDiff(reference, h_CUBLAS, matrix_size.uiWC, matrix_size.uiHC, 100, 1.0e-5f);
+        }
 
-    if (resCUBLAS != true)
-    {
-        printDiff(reference, h_CUBLAS, matrix_size.uiWC, matrix_size.uiHC, 100, 1.0e-5f);
+        free(reference);
+        printf("Comparing CUBLAS Matrix Multiply with CPU results: %s\n", (true == resCUBLAS) ? "PASS" : "FAIL");
     }
-
-    printf("Comparing CUBLAS Matrix Multiply with CPU results: %s\n", (true == resCUBLAS) ? "PASS" : "FAIL");
-
     printf("\nNOTE: The CUDA Samples are not meant for performance measurements. Results may vary when GPU Boost is enabled.\n");
 
     // clean up memory
     free(h_A);
     free(h_B);
     free(h_C);
-    free(reference);
     checkCudaErrors(cudaFree(d_A));
     checkCudaErrors(cudaFree(d_B));
     checkCudaErrors(cudaFree(d_C));

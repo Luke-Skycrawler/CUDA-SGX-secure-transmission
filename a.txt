@@ -1,0 +1,80 @@
+[Matrix Multiply CUBLAS] - Starting...
+GPU Device 0: "GeForce RTX 2080 Ti" with compute capability 7.5
+
+GPU Device 0: "GeForce RTX 2080 Ti" with compute capability 7.5
+
+MatrixA(640,480), MatrixB(480,320), MatrixC(640,320)
+CPU Encryption:0.013677
+CPU Encryption:0.008680
+GPU Decryption:0.000254
+GPU Decryption:0.000133
+GPU Encryption:0.000060
+CPU Decryption:0.012206
+done.
+Performance= 65.20 GFlop/s,Compute time= 4.473 msec, Total time= 301.531 msec, Size= 196608000 Ops, nIter=100
+
+NOTE: The CUDA Samples are not meant for performance measurements. Results may vary when GPU Boost is enabled.
+[Matrix Multiply CUBLAS] - Starting...
+GPU Device 0: "GeForce RTX 2080 Ti" with compute capability 7.5
+
+GPU Device 0: "GeForce RTX 2080 Ti" with compute capability 7.5
+
+MatrixA(1280,960), MatrixB(960,640), MatrixC(1280,640)
+CPU Encryption:0.037723
+CPU Encryption:0.012242
+GPU Decryption:0.000804
+GPU Decryption:0.000387
+GPU Encryption:0.000215
+CPU Decryption:0.037906
+done.
+Performance= 419.49 GFlop/s,Compute time= 18.204 msec, Total time= 374.943 msec, Size= 1572864000 Ops, nIter=100
+
+NOTE: The CUDA Samples are not meant for performance measurements. Results may vary when GPU Boost is enabled.
+[Matrix Multiply CUBLAS] - Starting...
+GPU Device 0: "GeForce RTX 2080 Ti" with compute capability 7.5
+
+GPU Device 0: "GeForce RTX 2080 Ti" with compute capability 7.5
+
+MatrixA(2560,1920), MatrixB(1920,1280), MatrixC(2560,1280)
+CPU Encryption:0.099951
+CPU Encryption:0.035770
+GPU Decryption:0.003025
+GPU Decryption:0.001518
+GPU Encryption:0.000852
+CPU Decryption:0.118846
+done.
+Performance= 1919.30 GFlop/s,Compute time= 115.634 msec, Total time= 655.600 msec, Size= 12582912000 Ops, nIter=100
+
+NOTE: The CUDA Samples are not meant for performance measurements. Results may vary when GPU Boost is enabled.
+[Matrix Multiply CUBLAS] - Starting...
+GPU Device 0: "GeForce RTX 2080 Ti" with compute capability 7.5
+
+GPU Device 0: "GeForce RTX 2080 Ti" with compute capability 7.5
+
+MatrixA(6400,4800), MatrixB(4800,3200), MatrixC(6400,3200)
+CPU Encryption:0.472394
+CPU Encryption:0.229297
+GPU Decryption:0.018619
+GPU Decryption:0.009307
+GPU Encryption:0.004390
+CPU Decryption:0.625412
+done.
+Performance= 6077.84 GFlop/s,Compute time= 1518.187 msec, Total time= 3234.833 msec, Size= 196608000000 Ops, nIter=100
+
+NOTE: The CUDA Samples are not meant for performance measurements. Results may vary when GPU Boost is enabled.
+[Matrix Multiply CUBLAS] - Starting...
+GPU Device 0: "GeForce RTX 2080 Ti" with compute capability 7.5
+
+GPU Device 0: "GeForce RTX 2080 Ti" with compute capability 7.5
+
+MatrixA(12800,9600), MatrixB(9600,6400), MatrixC(12800,6400)
+CPU Encryption:1.765436
+CPU Encryption:0.844180
+GPU Decryption:0.074242
+GPU Decryption:0.037130
+GPU Encryption:0.018069
+CPU Decryption:2.267576
+done.
+Performance= 8934.64 GFlop/s,Compute time= 11902.776 msec, Total time= 17604.107 msec, Size= 1572864000000 Ops, nIter=100
+
+NOTE: The CUDA Samples are not meant for performance measurements. Results may vary when GPU Boost is enabled.

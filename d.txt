@@ -1,0 +1,40 @@
+[Matrix Multiply CUBLAS] - Starting...
+GPU Device 0: "GeForce RTX 2080 Ti" with compute capability 7.5
+
+GPU Device 0: "GeForce RTX 2080 Ti" with compute capability 7.5
+
+MatrixA(1280,960), MatrixB(960,640), MatrixC(1280,640)
+done.
+Performance= 136.01 GFlop/s,Compute time= 5.510 msec, Total time= 346.926 msec, Size= 1572864000 Ops, nIter=30
+
+NOTE: The CUDA Samples are not meant for performance measurements. Results may vary when GPU Boost is enabled.
+[Matrix Multiply CUBLAS] - Starting...
+GPU Device 0: "GeForce RTX 2080 Ti" with compute capability 7.5
+
+GPU Device 0: "GeForce RTX 2080 Ti" with compute capability 7.5
+
+MatrixA(1280,960), MatrixB(960,640), MatrixC(1280,640)
+done.
+Performance= 553.50 GFlop/s,Compute time= 18.234 msec, Total time= 284.168 msec, Size= 1572864000 Ops, nIter=100
+
+NOTE: The CUDA Samples are not meant for performance measurements. Results may vary when GPU Boost is enabled.
+[Matrix Multiply CUBLAS] - Starting...
+GPU Device 0: "GeForce RTX 2080 Ti" with compute capability 7.5
+
+GPU Device 0: "GeForce RTX 2080 Ti" with compute capability 7.5
+
+MatrixA(1280,960), MatrixB(960,640), MatrixC(1280,640)
+done.
+Performance= 3164.33 GFlop/s,Compute time= 168.923 msec, Total time= 497.061 msec, Size= 1572864000 Ops, nIter=1000
+
+NOTE: The CUDA Samples are not meant for performance measurements. Results may vary when GPU Boost is enabled.
+[Matrix Multiply CUBLAS] - Starting...
+GPU Device 0: "GeForce RTX 2080 Ti" with compute capability 7.5
+
+GPU Device 0: "GeForce RTX 2080 Ti" with compute capability 7.5
+
+MatrixA(1280,960), MatrixB(960,640), MatrixC(1280,640)
+done.
+Performance= 8277.92 GFlop/s,Compute time= 1547.077 msec, Total time= 1900.071 msec, Size= 1572864000 Ops, nIter=10000
+
+NOTE: The CUDA Samples are not meant for performance measurements. Results may vary when GPU Boost is enabled.
